@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      let userDocPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return isSignedIn() && exists(userDocPath) && get(userDocPath).data.role == 'admin';
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
+    }
+
+    match /claims/{claimId} {
+      // List optimization: Avoid isAdmin() get() call in list queries for performance
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid);
+      // Admin list override is handled via different queries or if strictly needed
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+  }
+}

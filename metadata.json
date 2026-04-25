@@ -1,0 +1,6 @@
+{
+  "name": "Smart Vehicle Damage Claim System",
+  "description": "An AI-powered insurance claim platform using Google Gemini for vehicle damage detection, repair cost estimation, and fraud detection.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["AI Damage Detection", "Fraud Analysis", "Cost Estimation", "Voice Assistant"]
+}
