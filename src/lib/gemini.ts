@@ -1,6 +1,17 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiInstance: GoogleGenAI | null = null;
+
+function getAI(): GoogleGenAI {
+  if (!aiInstance) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is not set. Please add it to your Netlify environment variables.");
+    }
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+}
 
 const damageAnalysisSchema = {
   type: Type.OBJECT,
@@ -41,6 +52,7 @@ const damageAnalysisSchema = {
 };
 
 export async function analyzeVehicleDamage(imageB64: string) {
+  const ai = getAI();
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: [
@@ -68,6 +80,7 @@ export async function analyzeVehicleDamage(imageB64: string) {
 }
 
 export async function analyzeMultiImage(imagesB64: string[]) {
+  const ai = getAI();
   const imageParts = imagesB64.map(image => ({
     inlineData: { data: image, mimeType: "image/jpeg" }
   }));
@@ -95,6 +108,7 @@ export async function analyzeMultiImage(imagesB64: string[]) {
 }
 
 export async function getVoiceAnalysis(transcript: string) {
+  const ai = getAI();
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: `Extract vehicle damage details from this transcript: "${transcript}". 

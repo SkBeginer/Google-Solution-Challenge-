@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { auth, db } from "../lib/firebase";
+import { auth, db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { Shield, Mail, Lock, User, Triangle, ArrowLeft } from "lucide-react";
@@ -20,15 +20,28 @@ export default function AuthPage() {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       
-      const userDoc = await getDoc(doc(db, "users", result.user.uid));
+      const path = `users/${result.user.uid}`;
+      let userDoc;
+      try {
+        userDoc = await getDoc(doc(db, "users", result.user.uid));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.GET, path);
+        return;
+      }
+
       if (!userDoc.exists()) {
-        await setDoc(doc(db, "users", result.user.uid), {
-          userId: result.user.uid,
-          email: result.user.email,
-          displayName: result.user.displayName,
-          role: "user",
-          createdAt: new Date().toISOString()
-        });
+        try {
+          await setDoc(doc(db, "users", result.user.uid), {
+            userId: result.user.uid,
+            email: result.user.email,
+            displayName: result.user.displayName,
+            role: "user",
+            createdAt: new Date().toISOString()
+          });
+        } catch (err) {
+          handleFirestoreError(err, OperationType.WRITE, path);
+          return;
+        }
       }
       navigate("/dashboard");
     } catch (err: any) {
@@ -47,13 +60,20 @@ export default function AuthPage() {
       } else {
         const result = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(result.user, { displayName: name });
-        await setDoc(doc(db, "users", result.user.uid), {
-          userId: result.user.uid,
-          email: result.user.email,
-          displayName: name,
-          role: "user",
-          createdAt: new Date().toISOString()
-        });
+        
+        const path = `users/${result.user.uid}`;
+        try {
+          await setDoc(doc(db, "users", result.user.uid), {
+            userId: result.user.uid,
+            email: result.user.email,
+            displayName: name,
+            role: "user",
+            createdAt: new Date().toISOString()
+          });
+        } catch (err) {
+          handleFirestoreError(err, OperationType.WRITE, path);
+          return;
+        }
       }
       navigate("/dashboard");
     } catch (err: any) {

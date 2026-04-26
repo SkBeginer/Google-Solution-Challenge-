@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { UserProfile, Claim } from "../types";
-import { db } from "../lib/firebase";
+import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { motion } from "motion/react";
 import { 
@@ -37,13 +37,14 @@ export default function ClaimView({ user }: ClaimViewProps) {
   useEffect(() => {
     async function fetchClaim() {
       if (!id) return;
+      const path = `claims/${id}`;
       try {
         const docSnap = await getDoc(doc(db, "claims", id));
         if (docSnap.exists()) {
           setClaim({ id: docSnap.id, ...docSnap.data() } as Claim);
         }
       } catch (err) {
-        console.error(err);
+        handleFirestoreError(err, OperationType.GET, path);
       } finally {
         setLoading(false);
       }
@@ -74,11 +75,12 @@ export default function ClaimView({ user }: ClaimViewProps) {
 
   const updateStatus = async (newStatus: string) => {
     if (!id || !claim) return;
+    const path = `claims/${id}`;
     try {
       await updateDoc(doc(db, "claims", id), { status: newStatus, updatedAt: new Date().toISOString() });
       setClaim({ ...claim, status: newStatus as any });
     } catch (err) {
-      console.error(err);
+      handleFirestoreError(err, OperationType.UPDATE, path);
     }
   };
 

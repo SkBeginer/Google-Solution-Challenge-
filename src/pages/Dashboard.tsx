@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { UserProfile, Claim } from "../types";
-import { db } from "../lib/firebase";
+import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { motion } from "motion/react";
 import { Link } from "react-router-dom";
@@ -40,9 +40,10 @@ export default function Dashboard({ user }: DashboardProps) {
 
   useEffect(() => {
     async function fetchClaims() {
+      const path = "claims";
       try {
         const q = query(
-          collection(db, "claims"), 
+          collection(db, path), 
           where("userId", "==", user.userId),
           orderBy("createdAt", "desc"),
           limit(20)
@@ -50,7 +51,7 @@ export default function Dashboard({ user }: DashboardProps) {
         const snap = await getDocs(q);
         setClaims(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Claim)));
       } catch (err) {
-        console.error(err);
+        handleFirestoreError(err, OperationType.LIST, path);
       } finally {
         setLoading(false);
       }

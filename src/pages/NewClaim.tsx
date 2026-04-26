@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { UserProfile, Claim, DamageAnalysis } from "../types";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
-import { db } from "../lib/firebase";
+import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { analyzeVehicleDamage, analyzeMultiImage, getVoiceAnalysis } from "../lib/gemini";
 import { 
@@ -237,9 +237,10 @@ export default function NewClaim({ user }: NewClaimProps) {
 
   const submitClaim = async () => {
     setLoading(true);
+    const path = "claims";
     try {
       const claimId = `CLM-${Math.floor(100000 + Math.random() * 900000)}`;
-      await addDoc(collection(db, "claims"), {
+      await addDoc(collection(db, path), {
         claimId,
         userId: user.userId,
         userName: user.displayName,
@@ -257,7 +258,7 @@ export default function NewClaim({ user }: NewClaimProps) {
       });
       navigate("/dashboard");
     } catch (err) {
-      console.error(err);
+      handleFirestoreError(err, OperationType.WRITE, path);
     } finally {
       setLoading(false);
     }

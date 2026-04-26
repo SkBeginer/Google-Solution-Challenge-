@@ -6,7 +6,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "./lib/firebase";
+import { auth, db, handleFirestoreError, OperationType } from "./lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { UserProfile } from "./types";
 
@@ -28,6 +28,7 @@ export default function App() {
     return onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
+          const path = `users/${firebaseUser.uid}`;
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
           if (userDoc.exists()) {
             setUser(userDoc.data() as UserProfile);
@@ -43,7 +44,7 @@ export default function App() {
             setUser(newProfile);
           }
         } catch (err) {
-          console.error("Auth sync error:", err);
+          handleFirestoreError(err, OperationType.GET, `users/${firebaseUser.uid}`);
           setUser(null);
         }
       } else {
